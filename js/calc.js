@@ -29,7 +29,7 @@ var calc = {
         var strs = []; //定义一数组
         strs = date.split("-"); //字符分割
         var res = calendar.solar2lunar(parseInt(strs[0]), parseInt(strs[1]), parseInt(strs[2]));
-        //console.log(res.code);
+        console.log(res.code);
         if (isNotEmpty(res) && res.code == 1) {
             return Date2Num(res.data.lYear + "-" + res.data.lMonth + "-" + res.data.lDay);
         } else {
@@ -43,7 +43,7 @@ var calc = {
         var strs = []; //定义一数组
         strs = date.split("-"); //字符分割
         var res = calendar.lunar2solar(parseInt(strs[0]), parseInt(strs[1]), parseInt(strs[2]), false);
-        // //console.log(res.code);
+        // console.log(res.code);
         if (isNotEmpty(res) && res.code === 1) {
             return Date2Num(res.data.cYear + "-" + res.data.cMonth + "-" + res.data.cDay);
         } else {
@@ -68,7 +68,7 @@ var calc = {
         weekDay[4] = "星期四";
         weekDay[5] = "星期五";
         weekDay[6] = "星期六";
-        //console.log("今天是：" + year + "年" + mouths + "月" + day + "日" + hours + ":" + minutes + ":" + seconds + " " + weekDay[date.getDay()]);
+        console.log("今天是：" + year + "年" + mouths + "月" + day + "日" + hours + ":" + minutes + ":" + seconds + " " + weekDay[date.getDay()]);
         return weekDay[date.getDay()];
     },
     //获取标准节假日
@@ -87,13 +87,13 @@ var calc = {
         festivalDays[date.getFullYear() + "1001"] = calendar.sFtv["1001"];
         var qmj = null;
         for (var i = 4; i <= 6; i++) {
-            if (this.getTerm(date.getFullYear(), 04, i) == "清明") {
+            if (this.getTerm(date.getFullYear(), 04, i) === "\u6e05\u660e") {
                 qmj = date.getFullYear() + "04" + "0" + i;
                 break;
             }
         }
         if (isNotEmpty(qmj)) {
-            festivalDays[qmj] = "清明";
+            festivalDays[qmj] = "\u6e05\u660e";
         }
         //农历节日
         festivalDays[this.lunar2solar(date.getFullYear() + "-01-01")] = calendar.lFtv["0101"];
@@ -106,7 +106,7 @@ var calc = {
         } else {
             festivalDays[dateAutumn] = calendar.lFtv["0815"];
         }
-        // //console.log(festivalDays);
+        // console.log(festivalDays);
         var str = Arr2Json(festivalDays);
         if (useCache) {
             setCookie("py:rest:std:" + date.getFullYear(), str);
@@ -129,19 +129,22 @@ var calc = {
     },
 
     //初始化当年的节假日
-    initHoliday: function (date) {
+    initHoliday: function (date, useCache) {
         var result = {}; //存储所有计算出来的节假日
         var date = new Date(Date.parse(date));
-        var restDays = getCookie("py:rest:" + date.getFullYear());
-        if (isNotEmpty(restDays)) {
-            return JSON.parse(restDays);
+        if (isNotEmpty(useCache) && useCache) {
+            var restDays = getCookie("py:rest:" + date.getFullYear());
+            if (isNotEmpty(restDays)) {
+                return JSON.parse(restDays);
+            }
         }
-        var holidays = this.getStandardFestivals(date, true);
+        var holidays = this.getStandardFestivals(date, useCache);
+        console.log(holidays)
         holidays = JSON.parse(holidays);
         //这里需要加上明年1月1日的放假情况，保证12月30左右的放假/加班情况
         holidays[date.getFullYear() + 1 + '0101'] = calendar.sFtv["0101"];
-        //console.log(holidays)
         var i = 1;
+        // console.log(holidays)
         for (var day in holidays) {
             //计算加班,休息,节假日
             var type = 3;
@@ -152,60 +155,63 @@ var calc = {
             }
             //中秋国庆在同一天
             if (holidays[day] === (calendar.sFtv["1001"] + "&" + calendar.lFtv["0815"])) {
-                var res = {};
-                res = this.calcHolidays(day, 1);
-                //console.log("同一天:" + res);
+                var res = this.calcHolidays(Num2Date(day), 1);
+                console.log(day)
+                console.log("同一天:" + Arr2Json(res));
                 result = concatObj(result, res);
                 //处理中秋节
                 type = 3;
             }
-            //console.log(day + "-----" + type)
+            console.log(day + "-----" + type)
             //处理节假日
             var res = this.calcHolidays(Num2Date(day), type);
-            //console.log(res);
+            console.log(result)
+            console.log(res);
             result = concatObj(result, res);
-            //console.log(result)
+            console.log(result)
             //中秋节靠近国庆节
             var autumnDayNum = parseInt(day.substring(4));
-            //console.log("autumnDayNum:" + autumnDayNum);
+            console.log("autumnDayNum:" + autumnDayNum);
             if (autumnDayNum > 923 && holidays[day] === calendar.lFtv["0815"]) {
                 //获取国庆的星期信息
                 var dateDay = new Date(Date.parse(Num2Date(day)));
                 dateDay.setMonth(9);
                 dateDay.setDate(1);
-                //console.log("date:" + dateDay);
+                console.log("date:" + dateDay);
                 if (autumnDayNum > 1000) {
                     switch (dateDay.getDay()) {
                         case 0:
-                            dateDay = addDate(date,7);
+                            dateDay = addDate(date, 7);
                             break;
                         case 1:
-                            dateDay = addDate(date,-1);
+                            dateDay = addDate(date, -1);
                             break;
                         case 2:
-                            dateDay = addDate(date,-1);
+                            dateDay = addDate(date, -1);
                             break;
                         case 3:
-                            dateDay = addDate(date,10);
+                            dateDay = addDate(date, 10);
                             break;
                         case 4:
-                            dateDay = addDate(date,9);
+                            dateDay = addDate(date, 9);
                             break;
                         case 5:
-                            dateDay = addDate(date,-5);
+                            dateDay = addDate(date, -5);
                             break;
                         case 6:
-                            dateDay = addDate(date,7);
+                            dateDay = addDate(date, 7);
                             break;
                     }
                     //需要取消加班的时间
-                    //console.log(dateDay)
+                    console.log(dateDay)
                     if (isNotEmpty(result[dateDay])) {
                         delete result[dateDay];
                     }
                     //计算中秋节
                     if (autumnDayNum != 1001) {
+                        console.log(day)
                         day = parseInt(day);
+                        console.log(day)
                         result[day] = 1;
                     }
                 } else {
@@ -215,7 +221,9 @@ var calc = {
             }
 
         }
-        setCookie("py:rest:" + date.getFullYear(), Arr2Json(result));
+        if (isNotEmpty(useCache) && useCache) {
+            setCookie("py:rest:" + date.getFullYear(), Arr2Json(result));
+        }
         return result;
     },
 
@@ -225,21 +233,24 @@ var calc = {
      * @param type  1春节 国庆 2除夕 3其他
      */
     calcHolidays: function (dateDay, type) {
-        //console.log(dateDay)
+        console.log(dateDay)
         type = parseInt(type);
         var date = new Date(Date.parse(dateDay));
+        console.log(dateDay.toString())
         dateDay = Date2Num(dateDay.toString());
+        console.log(dateDay)
+        console.log(dateDay)
         var result = {};
         //春节往前调一天
         if (type === 1 && date.getMonth() < 6) {
             dateDay = addDate(dateDay, -1);//退到除夕  方便国庆和春节一起处理 除夕不记录  因为除夕已经被当作节日 后面会处理
-            //console.log(dateDay);
+            console.log(dateDay);
         } else {
             //记录当天放假
             result[dateDay] = 1;
         }
         date = new Date(Date.parse(Num2Date(dateDay)));
-        //console.log(date.getDay());
+        console.log(date.getDay());
         switch (date.getDay()) {
             case 0:
                 //节假日在周日  春节从除夕算起  国庆从1号算起 后六天一定放假
@@ -400,7 +411,7 @@ var calc = {
  * @returns {boolean}
  */
 function isNotEmpty(args) {
-    if (args != null && args != undefined && args != "") {
+    if (args != null && args != undefined && args != "" ) {
         return true;
     }
     return false;
@@ -414,6 +425,7 @@ function isNotEmpty(args) {
  * @returns {Date}
  */
 function addDate(date, day) {
+    console.log(date)
     date = Date.parse(Num2Date(date.toString())) + (day * 86400000);
     date = new Date(date);
     return date.getFullYear() + "" + addZero(date.getMonth() + 1) + "" + addZero(date.getDate());
@@ -453,18 +465,18 @@ function concatObj(arr1, arr2) {
 
 //封装成json 自带的JSON.stringify()会崩溃不知道为什么
 function Arr2Json(arr) {
-    var str = '{';
-    var i = 1;
-    for (var key in  arr) {
-        if (i == Object.keys(arr).length) {
-            str += '"' + key + '":"' + arr[key] + '"';
-        } else {
-            str += '"' + key + '":"' + arr[key] + '",';
-        }
-        i++;
-    }
-    str += '}';
-    return str;
+    // var str = '{';
+    // var i = 1;
+    // for (var key in  arr) {
+    //     if (i == Object.keys(arr).length) {
+    //         str += '"' + key + '":"' + arr[key] + '"';
+    //     } else {
+    //         str += '"' + key + '":"' + arr[key] + '",';
+    //     }
+    //     i++;
+    // }
+    // str += '}';
+    return JSON.stringify(arr);
 }
 
 /**
@@ -488,7 +500,10 @@ function Arr2Date(arr, type) {
  * @returns {string}
  */
 function addZero(str) {
-    return str.toString().length < 2 ? ("0" + str) : str;
+    if(isNotEmpty(str)) {
+        str = str.toString().length < 2 ? ("0" + str) : str;
+    }
+    return str;
 }
 
 /**
@@ -496,6 +511,7 @@ function addZero(str) {
  * @return {string}
  */
 function Num2Date(date) {
+    date = date.toString();
     var year, month, day;
     year = date.substring(0, 4);
     month = date.substring(4, 6);
